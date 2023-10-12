@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+### * TODO: flaggable behaviors for specific workflows
+###     `ppmp -js` be like:  also slip/indent on (parens)
+
+Dipset() { cat <<'EOF'
+NAME:
+   pmpp - pretty much, poor man's  pretty print
+USAGE:
+   ` pmpp [-OPTIONS] <INPUT> `
+EXAMPLE:
+   $ ` echo '<html>{"nested":[{"values":"json"},{"values":"anything"}]}</html>' | pmpp `
+   :   <html>
+   :    {
+   :     "nested":[
+   :      {"values":"json"},
+   :      {"values":"anything"}
+   :     ]
+   :    }
+   :   </html>
+
+OPTIONAL PARAMETERS:
+   -h,         Show this information.
+    --help
+
+EOF
+	exit ${1:-0}
+}
+[[ "$1" != +(\-)@([hH])?([eE][lL][pP]) ]] || Dipset ${@:2}
+
+point=($(cat $* | grep -nEo '(<body>|</body>)' | cut -d\: -f1 )) && i=0 || exit 1
+while read line ; do
+	case "$line" in
+	\<[!\/]*|\{*|\[*) printf "%$((i++))s $line\n" ;;
+	\<\/*|*\]|*\}) printf "%$((i--))s $line\n" ;;
+	*) printf "%$((i=i<0?0:i))s $line\n"
+	esac
+done < <(sed -n "${point[0]},${point[1]}~1p" $* | sed 's/</\n</g;s/>/>\n/g;s/{/{\n/g;s/\[/\[\n/g;s/\]/\n\]/g;s/}/\n}/g;s/,/,\n/g' )
