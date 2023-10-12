@@ -47,12 +47,12 @@ fetchScoresJSON() { curl -s 'https://site.web.api.espn.com/apis/v2/scoreboard/he
 #          ? 5:fantasy-season                        |`.
 #          ? 6:unknown-season                       _:_ `---------------------------------------------------------------------------------------------------------------.
 fetchHistorical() { local Od ; Of=${Od:=$1/$2/$3}/${4:-2}.scoreboard.html ; mkdir -p $Od ; curl -s "https://www.espn.com/$1/scoreboard/_/week/$3/year/$2/seasontype/${4:-2}" -H 'authority: www.espn.com' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/$1/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed -o "$Of" ; }
-#                                          ^  ^       ^._______________________________________________________________________________   ,--------------------------^
+#                          `${sport}`...^  ^  ^       ^._______________________________________________________________________________   ,--------------------------^
 #                                          |   `--------------------------------------------------------------------------------------- `'. --------.
 #                                          |                                                                                              |          `------------------------------------------------.
 #                                          |                                                                                               `----.                                                      `.
 #                                           `-----------.___                                                                                      `.___                                                   `.___
-menuHistorical() { read -p 'what year? [2002-2023|q]: ' sel[1] ; read -p "seasonType? 1(pre),2(normal),3(post),4(off),5(?),6(?),q(quit) [1-6|q]: " sel[3] ; read -p "what week of that season? [1-16|q]: " sel[2] ; for s in ${sel[@]}; do [[ "$s" != @([qQ])?([uU][iI][tT]) ]] || exit 0 ; done ; fetchHistorical ${sel[@]} ; }
+menuHistorical() { read -p 'what year? [2002-2023|q]: ' sel[0] ; read -p "seasonType? 1(pre),2(normal),3(post),4(off),5(?),6(?),q(quit) [1-6|q]: " sel[2] ; read -p "what week of that season? [1-16|q]: " sel[1] ; for s in ${sel[@]}; do [[ "$s" != @([qQ])?([uU][iI][tT]) ]] || exit 0 ; done ; fetchHistorical $sport ${sel[@]} ; }
 #fetchHistorical() { curl -s "https://www.espn.com/college-football/scoreboard/_/week/6/year/2023/seasontype/2" -H 'authority: www.espn.com' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/college-football/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed | tee college-football/2023-week6.scoreboard.html ; }
 (($#!=0)) || menuHistorical
 
@@ -119,10 +119,7 @@ EOF
 }
 
 i=0 ; unset games[*]
-while read team[1] ; do (( i == 0 )) && team[0]="${team[1]}" || {
-  games[${#games[@]}]="[ ${team[0]}, ${team[1]} ]"
- } ; ((i=i!=1?1:0))
-done < <({ getScores "$sport" || exit 1 ; } | sed 's/\/li>/\n/g;s/},{/}\n{/g' | grep '"score":' | sed 's/{\"/{\n\t\"/g;s/\"}/\"\n}/g' | awk '!a[$0]++' | op '??=\"id\"\:*isHome*' '%\,\"records*' '({).' '.(})' )
+while read team[1] ; do ((i==0)) && team[0]="${team[1]}" || { games[${#games[@]}]="[ ${team[0]}, ${team[1]} ]" ; } ; ((i=i!=1?1:0)) ; done < <({ getScores "$sport" || exit 1 ; } | sed 's/\/li>/\n/g;s/},{/}\n{/g' | grep '"score":' | sed 's/{\"/{\n\t\"/g;s/\"}/\"\n}/g' | awk '!a[$0]++' | op '??=\"id\"\:*isHome*' '%\,\"records*' '({).' '.(})' )
 
 unset Of
 { printf '{"games":[' ; printf '%s,' "${games[@]::${#games[@]}-1}" ; printf '"${games[-1]}"]}' ; } 2>/dev/null > ${Of:=$Od/$(date +'%Y%m%d').scores.json}
