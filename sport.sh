@@ -26,28 +26,35 @@ EOF
 }
 [[ "$1" != *(\-)@([hH])?([eE][lL][pP]) ]] || Dipset
 
-## atleast while testing, offer a menu of known working sport-leagues when one is not specified at runtime.
+## offer a menu of known working sport-leagues when one is not specified at runtime.
 #(($#!=0)) || Dipset 1
 (($#!=0)) || { echo "select a sports-league..." && select sel in "cancel" "college-football" "mens-college-basketball" "womens-college-basketball" ; { [[ "$sel" != "cancel" ]] && { sport="$sel" ; break ; } || exit 0 ; } ; }
 
 mkdir -p ${Od:=~/Projects/scoreboard/${sport:=${1//\ /\-}}}
 
-# CURRENT (WEEKLY) SCOREBOARD
+## CURRENT (WEEKLY) SCOREBOARD
 fetchScores() { curl -s "https://www.espn.com/$1/scoreboard" -H 'authority: www.espn.com' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,application/json' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/college-football/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed | tee $Od/$(date +'%Y%m%d%H%M').scoreboard.html ; }
-# * For current week, the json is directly retrievable through espn's pseudo-hidden api:
+# *Experimental: current week's json is directly retrievable through espn's pseudo-hidden api:
 fetchScoresJSON() { curl -s 'https://site.web.api.espn.com/apis/v2/scoreboard/header?sport=football&league=college-football&region=us&lang=en&contentorigin=espn&tz=America%2FNew_York' -H 'authority: site.web.api.espn.com' -H 'accept: application/json' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'dnt: 1' -H 'origin: https://www.espn.com' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/' -H 'sec-fetch-dest: empty' -H 'sec-fetch-mode: cors' -H 'sec-fetch-site: same-site' -H 'sec-gpc: 1' --compressed ; }
 
 # HISTORICAL{ .../year/[2002-2023]/_/week/[1-16]/[1-6]  } SOREBOARDS
-#seasonType:  ,------------------------------------'
-#            1:    pre-season
-#            2: normal-season
-#            3:   post-season
-#            4:    off-season
-#            5:      ?-season
-#            6:      ?-season
-#fetchHistorical() { curl -s "https://www.espn.com/college-football/scoreboard/_/week/6/year/2023/seasontype/2" -H 'authority: www.espn.com' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/college-football/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed | tee college-football/2023-week6.scoreboard.html ; }
+#                                                  |
+#seasonType:  ,-----------------------------------':
+#            1:    pre-season                       `.
+#            2: normal-season                        |
+#            3:   post-season                        |
+#            4:    off-season                        |
+#          ? 5:fantasy-season                        |`.
+#          ? 6:unknown-season                       _:_ `---------------------------------------------------------------------------------------------------------------.
 fetchHistorical() { local Od ; Of=${Od:=$1/$2/$3}/${4:-2}.scoreboard.html ; mkdir -p $Od ; curl -s "https://www.espn.com/$1/scoreboard/_/week/$3/year/$2/seasontype/${4:-2}" -H 'authority: www.espn.com' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/$1/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed -o "$Of" ; }
-#WIP menuHistorical() { echo "what year?" ; read -p '[2002-2023|q]: ' sel[1] ; echo "what season type?" ; echo "(1 pre)(2 normal)(3 post)(4 off)(5 ?)(6 ?)()" ; read -p '[1-6|q]: ' sel[2] ; echo "what week of that season?" ; read -p '[1..16|q]: ' sel[3] ; for s in ${sel[@]}; do [[ "$s" != @([qQ])?([uU][iI][tT]) ]] || exit 0 ; done ; fetchHistorical ${sel[@]} ; }
+#                                          ^  ^       ^._______________________________________________________________________________   ,--------------------------^
+#                                          |   `--------------------------------------------------------------------------------------- `'. --------.
+#                                          |                                                                                              |          `------------------------------------------------.
+#                                          |                                                                                               `----.                                                      `.
+#                                           `-----------.___                                                                                      `.___                                                   `.___
+menuHistorical() { read -p 'what year? [2002-2023|q]: ' sel[1] ; read -p "seasonType? 1(pre),2(normal),3(post),4(off),5(?),6(?),q(quit) [1-6|q]: " sel[3] ; read -p "what week of that season? [1-16|q]: " sel[2] ; for s in ${sel[@]}; do [[ "$s" != @([qQ])?([uU][iI][tT]) ]] || exit 0 ; done ; fetchHistorical ${sel[@]} ; }
+#fetchHistorical() { curl -s "https://www.espn.com/college-football/scoreboard/_/week/6/year/2023/seasontype/2" -H 'authority: www.espn.com' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/college-football/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed | tee college-football/2023-week6.scoreboard.html ; }
+(($#!=0)) || menuHistorical
 
 getScores() { local Of ; [[ -f ${Of:=$Od/$(date +'%Y%m%d%H%M').scoreboard.html} ]] && cat "$Of" || fetchScores "$sport" ; }
 updateIndicator() {
