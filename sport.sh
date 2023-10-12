@@ -8,6 +8,8 @@ USAGE:
 DESCRIPTION:
    scrape espn for live scoreboard data for a given sport.
    generate html page with said data.
+   begrudgingly learn javascript while doing stuff with team colors.
+
    <SPORTS-LEAGUE> must match whatever espn refers to it as in their url schema;
    for instance, this script was built working with "college-football" as \$1
       and so, presumably "mens-college-basketball" will work while that season is live.
@@ -48,7 +50,6 @@ fetchHistorical() { local Od ; Of=${Od:=$1/$2/$3}/${4:-2}.scoreboard.html ; mkdi
 #WIP menuHistorical() { echo "what sport?" ; select sel in "quit" "college-football" "mens-college-basketball" "womens-college-basketball" ; do [[ "$sel" == "quit" ]] && exit 0 || break ; done ; echo "what year?" ; read -p '[2002-2023|q]: ' sel[1] ; echo "what season type?" ; echo "(1 pre)(2 normal)(3 post)(4 off)(5 ?)(6 ?)()" ; read -p '[1-6|q]: ' sel[2] ; echo "what week of that season?" ; read -p '[1..16|q]: ' sel[3] ; for s in ${sel[@]}; do [[ "$s" != @([qQ])?([uU][iI][tT]) ]] || exit 0 ; done ; fetchHistorical ${sel[@]} ; }
 
 getScores() { local Of ; [[ -f ${Of:=$Od/$(date +'%Y%m%d%H%M').scoreboard.html} ]] && cat "$Of" || fetchScores "$sport" ; }
-
 updateIndicator() {
 	### TODO: how to set button to 1/2 & 1/2 tied teams' (colors, score); and set/give each button an id=${GAME_EUID} - when clicked, selects game to track for colors, and whatever else...
 	winners() { jq -Mc ".$FUNCNAME[]|[.abbrev,.teamColor,.altColor,.score]" -- $1 ; }
@@ -87,7 +88,7 @@ updateIndicator() {
       button { text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5), 0px -1px 3px rgba(0, 0, 0, 0.5), -1px 0px 3px rgba(0, 0, 0, 0.5), 1px 0px 3px rgba(0, 0, 0, 0.5); }
 EOF
 
-	[[ ! -f ${1%\.*}.css ]] || cat ${1%\.*}.css
+        [[ ! -f ${1%\.*}.css ]] || cat ${1%\.*}.css
 	[[ ! -f ${2%\.*}.css ]] || cat ${2%\.*}.css
 
 	cat <<EOF
@@ -110,22 +111,14 @@ EOF
 EOF
 }
 
-unset games[*]
-
-i=0
-
-while read team[1] ; do
- if (( i == 0 )); then
-  team[0]="${team[1]}"
- else
+i=0 ; unset games[*]
+while read team[1] ; do (( i == 0 )) && team[0]="${team[1]}" || {
   games[${#games[@]}]="[ ${team[0]}, ${team[1]} ]"
- fi ; ((i=i!=1?1:0))
-done < <({ getScores "$sport" || exit 1 ; } | sed 's/\/li>/\n/g;s/},{/}\n{/g' | grep '"score":' | sed 's/{\"/{\n\t\"/g;s/\"}/\"\n}/g' | awk '!a[$0]++' | op '??=\"id\"\:*isHome*' '%\,\"records*' '({ ).' '.( })' )
-#done < <({ getScores "$sport" || exit 1 ; } | sed 's/\/li>/\n/g' | grep $(date +'%Y/%m/%d') | sed 's/},{/}\n{/g' | grep -i '"score":' | sed 's/{\"/{\n\t\"/g;s/\"}/\"\n}/g' | awk '!a[$0]++' | op '??=\"id\"\:*isHome*' '%\,\"records*' '({ ).' '.( })' )
+ } ; ((i=i!=1?1:0))
+done < <({ getScores "$sport" || exit 1 ; } | sed 's/\/li>/\n/g;s/},{/}\n{/g' | grep '"score":' | sed 's/{\"/{\n\t\"/g;s/\"}/\"\n}/g' | awk '!a[$0]++' | op '??=\"id\"\:*isHome*' '%\,\"records*' '({).' '.(})' )
 
 unset Of
-
-{ echo '{' ; echo ' "games": [' ; for ((g=0;g<${#games[@]}-1;g++)); do echo '  '"${games[g]}," ; done ; echo '  '"${games[-1]}" ; echo ' ]' ; echo '}' ; } > ${Of:=$Od/$(date +'%Y%m%d').scores.json}
+{ printf '{"games":[' ; printf '%s,' "${games[@]::${#games[@]}-1}" ; printf '"${games[-1]}"]}' ; } 2>/dev/null > ${Of:=$Od/$(date +'%Y%m%d').scores.json}
 
 for ((i=0;i<$(jq -M '.games|length' -- $Of);i++)); do
  readarray scores < <(jq -M ".games[$i][0,1].score" -- $Of )
@@ -137,5 +130,5 @@ done
 now=$(date +'%Y%m%d%H%M')
 [[ ! -f ${Of%\.*}.ties.json ]] || { { echo '{' ; echo ' "ties": [' ; { head -n-1 ${Of%\.*}.ties.json | op '(  ).' '.(,)' ; } ; { tail -n1 ${Of%\.*}.ties.json | op '(  ).' ; } ; echo ' ]' ; echo '}' ; } > ${Of%\/*}/$now.ties.json ; }
 [[ ! -f ${Of%\.*}.winners.json ]] || { { echo '{' ; echo ' "winners": [' ; { head -n-1 ${Of%\.*}.winners.json | op '(  ).' '.(,)' ; } ; { tail -n1 ${Of%\.*}.winners.json | op '(  ).' ; } ; echo ' ]' ; echo '}' ; } > ${Of%\/*}/$now.winners.json ; }
-# updateIndicator "${Of%\/*}/$now.winners.json" "${Of%\/*}/$now.ties.json" >> $Od/$(date +'%Y%m%d%H%M%S').index.html
 [[ ! -f "$Od/index.html" ]] || mv "$Od/index.html" "$Od/.$(date +'%Y%m%d%H%M%S').index.html" ; updateIndicator "${Of%\/*}/$now.winners.json" "${Of%\/*}/$now.ties.json" > "$Od/index.html"
+### TODO: add lil diddy about removing remnant cruft.
