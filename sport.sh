@@ -94,17 +94,14 @@ updateIndicator() {
       .scoreboard { display: grid; grid-template-columns: auto auto auto auto; }
       button { text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5), 0px -1px 3px rgba(0, 0, 0, 0.5), -1px 0px 3px rgba(0, 0, 0, 0.5), 1px 0px 3px rgba(0, 0, 0, 0.5); }
 EOF
-
-        [[ ! -f ${1%\.*}.css ]] || cat ${1%\.*}.css
+  [[ ! -f ${1%\.*}.css ]] || cat ${1%\.*}.css
 	[[ ! -f ${2%\.*}.css ]] || cat ${2%\.*}.css
-
 	cat <<EOF
     </style>
   </head>
   <title>scoreboard</title>
   <body>
 EOF
-
 	[[ ! -f ${1%\.*}.html ]] || { echo '    <h1>WINNING</h1><br/>' ; echo '    <div class="scoreboard">' ; cat ${1%\.*}.html ; echo '    </div>' ; }
 	[[ ! -f ${2%\.*}.html ]] || { echo '    <h1>TIED</h1><br/>' ; echo '    <div class="scoreboard">' ; cat ${2%\.*}.html ; echo '    </div>' ; }
 	cat <<EOF
