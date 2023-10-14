@@ -25,6 +25,7 @@ EOF
 	exit ${1:-0}
 }
 [[ "$1" != *(\-)@([hH])?([eE][lL][pP]) ]] || Dipset
+for depends in 'op' 'wcl' 'iterdate' ; do [[ ! -x $(which $depends) ]] || { mkdir -p ~/bin ; curl -s "https://raw.githubusercontent.com/dumpster-of-things/scripts/main/$depends" -o ~/bin/$depends ; chmod 755 ~/bin/$depends ; alias $depends=~/bin/$depends ; } ; done
 (($#!=0)) || { echo "select a sports-league..." && select sel in "cancel" "college-football" "mens-college-basketball" "womens-college-basketball" ; { [[ "$sel" != "cancel" ]] || exit 0 ; break ; } ; }
 mkdir -p ${Od:=~/Projects/scoreboard/${sel[0]:=${1//\ /\-}}}
 fetchScores() { curl -s "https://www.espn.com/$1/scoreboard" -H 'authority: www.espn.com' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,application/json' -H 'accept-language: en-US,en;q=0.9' -H 'cache-control: no-cache' -H 'cookie: edition-view=espn-en-us; country=us; edition=espn-en-us; region=ccpa;' -H 'dnt: 1' -H 'pragma: no-cache' -H 'referer: https://www.espn.com/college-football/scoreboard' -H 'sec-fetch-dest: document' -H 'sec-fetch-mode: navigate' -H 'sec-fetch-site: same-origin' -H 'sec-gpc: 1' -H 'upgrade-insecure-requests: 1' --compressed | tee "$2" ; }
